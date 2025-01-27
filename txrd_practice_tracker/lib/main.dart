@@ -1,12 +1,11 @@
 import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:txrd_practice_tracker/util.dart';
 
 void main() {
   runApp(MyApp());
 }
-
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -16,7 +15,7 @@ class MyApp extends StatelessWidget {
     return ChangeNotifierProvider(
       create: (context) => MyAppState(),
       child: MaterialApp(
-        title: 'Namer App',
+        title: 'TXRD Practices',
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
@@ -45,6 +44,58 @@ class MyAppState extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  var practices = Defaults.startPractices;
+  var trainers = AvailableTrainers;
+  var selectedTrainer = null;
+
+  void toggleTrainer(AvailableTrainers trainer) {
+      selectedTrainer = Trainer(trainer.name, trainer.email, trainer.types);
+      notifyListeners();
+  }
+
+  List<Practice> filterPractices(AvailableTrainers? trainer) {
+    if (trainer == null) {
+      return practices;
+    }
+    return practices.where((praccy) => trainer.types.contains(praccy.type)).toList();
+  }
+
+  void signUp(Practice practice) {
+    practice.trainer = selectedTrainer?.name;
+    notifyListeners();
+  }
+
+  Future<void> _getDataFromSheets() async {
+
+    List dataDict = await getSheetsData(action: "read");
+    print("Got data: ${dataDict}");
+    // List columns = dataDict["columns"];
+    // List data = dataDict["data"];
+
+    // List<DataRow> tableRows = [];
+    // List<DataColumn> tableHeads = List<DataColumn>.generate(
+    //     columns.length, (index) => DataColumn(label: Text(columns[index])));
+
+    // for (int i = 0; i < data.length; i++) {
+    //   DataRow row = DataRow(
+    //     cells: List<DataCell>.generate(
+    //         columns.length, (index) => DataCell(Text("${data[i][index]}"))),
+    //   );
+
+    //   tableRows.add(row);
+    // }
+    // DataTable dataset = DataTable(
+    //   columns: tableHeads,
+    //   rows: tableRows,
+    //   columnSpacing: 20.0,
+    //   dataRowMinHeight: 10.0,
+    //   dataRowMaxHeight: 25.0,
+    //   dividerThickness: 2.0,
+    // );
+
+    // return dataset;
+  }
 }
 
 
@@ -58,13 +109,15 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    appState._getDataFromSheets();
     Widget page;
 switch (selectedIndex) {
   case 0:
-    page = GeneratorPage();
+    page = SkaterPage();
     break;
   case 1:
-    page = FavoritesPage();
+    page = TrainerPage();
     break;
   default:
     throw UnimplementedError('no widget for $selectedIndex');
@@ -107,9 +160,7 @@ switch (selectedIndex) {
   );}
   }
 
-
-
-class GeneratorPage extends StatelessWidget {
+class SkaterPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
@@ -153,37 +204,42 @@ class GeneratorPage extends StatelessWidget {
   }
 }
 
-class FavoritesPage extends StatelessWidget {
+class TrainerPage extends StatefulWidget {
+  @override
+  State<TrainerPage> createState() => _TrainerPageState();
+}
+
+class _TrainerPageState extends State<TrainerPage> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-
-   Trainer? selectedTrainer = null;
+     final TextEditingController trainerController = TextEditingController();
+    AvailableTrainers? selectedTrainer = appState.selectedTrainer;
+    var filteredPractices = appState.filterPractices(selectedTrainer);
 
     return ListView(
       children: [
          Center(
-          child: DropdownButton(
-            hint: Text('Who is training?'), 
-            value: selectedTrainer?.name,
-            onChanged: (newValue) {
-                selectedTrainer = newValue as Trainer;
-            },
-            items: trainers.map((trainer) {
-              return DropdownMenuItem(
+          child: DropdownMenu<AvailableTrainers>(
+            initialSelection: selectedTrainer,
+            controller: trainerController,
+            label: Text('Who is training?'), 
+            onSelected: (value) => setState(() {
+              appState.selectedTrainer = value;
+            }),
+            dropdownMenuEntries: AvailableTrainers.values.map<DropdownMenuEntry<AvailableTrainers>>((AvailableTrainers trainer) {
+              return DropdownMenuEntry(
                 value: trainer,
-                child: Text(trainer.name),
-              );
+                label: trainer.name,);
             }).toList(),
           ),
         ),
         Padding(
           padding: const EdgeInsets.all(20),
           child: Text('You have '
-              '${practices.length} practices coming up:'),
+              '${filteredPractices.length} practices coming up:'),
         ),
-        for (var praccy in practices)
-        PracticeRow(practice: praccy,),
+        ...filteredPractices.map((praccy) => PracticeRow(practice: praccy)),
       ],
     );
   }
@@ -216,14 +272,19 @@ class BigCard extends StatelessWidget {
   }
 }
 
-// This class is defined for future implementation
-class PracticeRow extends StatelessWidget {
+class PracticeRow extends StatefulWidget {
   final Practice practice;
 
   PracticeRow({required this.practice});
 
   @override
+  State<PracticeRow> createState() => _PracticeRowState();
+}
+
+class _PracticeRowState extends State<PracticeRow> {
+  @override
   Widget build(BuildContext context) {
+      var appstate = context.watch<MyAppState>();
     final theme = Theme.of(context);
     final titleStyle = theme.textTheme.bodySmall!.copyWith(
       color: theme.colorScheme.onSurface,
@@ -233,24 +294,35 @@ class PracticeRow extends StatelessWidget {
     );
     return Expanded(
       child: Container(
-        color: practice.color,
+        color: widget.practice.color,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(practice.title,
+            Text(widget.practice.title,
             style: titleStyle,), 
-            Text(practice.date,
+            Text(widget.practice.date,
             style: timeStyle,),
             Padding(
               padding: const EdgeInsets.all(4.0),
-              child: ElevatedButton(onPressed: (){
-                print("You got it buddy");
-              }, child: Text("Host")),
+              child: ElevatedButton(
+                onPressed: _isButtonDisabled() ? null : () {
+                  appstate.signUp(widget.practice);
+                },
+                child: Text(getButtonText()),
+                ),
             )
           ],
         ),
       ),
     );
+  }
+
+  bool _isButtonDisabled() {
+    return widget.practice.trainer != null;
+  }
+
+  String getButtonText() {
+    return widget.practice.trainer == null ? "Sign Up" : widget.practice.trainer!;
   }
 }
 
@@ -259,7 +331,7 @@ class Practice {
   late final Color color;
   final String title;
   final String date;
-  String? trainer;
+String? trainer;
 
   Practice({
     required this.type,
@@ -312,18 +384,36 @@ class Trainer{
   Trainer(this.name, this.email, this.types) {
     types.add(PracticeType.open);
   }
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! Trainer) return false;
+    return name == other.name && email == other.email;
+  }
+
+  @override
+  int get hashCode => name.hashCode ^ email.hashCode;
 }
 
-final List<Trainer> trainers =[
-  Trainer("Mary", "mary.christmas@txrd.com", [PracticeType.hellcat]),
-  Trainer("Ambi", "ambitchous@txrd.com", [PracticeType.hellcat, PracticeType.rookies, PracticeType.travel]),
-  Trainer("JQ", "josequeervo@txrd.com", [PracticeType.rhinestone, PracticeType.rookies]),
-  Trainer("Flix", "netflixandkill@txrd.com", [PracticeType.puta])
-];
 
-final List<Practice> practices = [
+class Defaults {
+  static final List<Practice> startPractices = [
   Practice(type: PracticeType.open, title: "Open Bout @ Warehouse + 7:00pm - 8:30pm", date: "Mon 1.27"),
   Practice(type: PracticeType.rhinestone, title: "RS Practice @ Warehouse + 8:30pm - 10:30pm", date: "Mon 1.27"),
   Practice(type: PracticeType.puta, title:"PDF @ Warehouse + 8:30pm - 10:30pm", date: "Tue 1.28"),
   Practice(type: PracticeType.hellcat, title: "HC @ Warehouse + 8:30pm - 10:30pm", date: "Wed 1.29"),
 ];
+
+}
+
+enum AvailableTrainers {
+  mary("Mary", "mary.christmas@txrd.com", [PracticeType.hellcat, PracticeType.open]),
+  ambi("Ambitchous", "ambitchous@txrd.com", [PracticeType.hellcat, PracticeType.rookies, PracticeType.travel, PracticeType.open]),
+  jq("Jose Queervo", "josequeervo@txrd.com", [PracticeType.rhinestone, PracticeType.rookies, PracticeType.open]),
+  flix("Netflix and Kill", "netflixandkill@txrd.com", [PracticeType.puta, PracticeType.open]);
+
+  const AvailableTrainers(this.name, this.email, this.types);
+  final String name;
+  final String email;
+  final List<PracticeType> types;
+}
