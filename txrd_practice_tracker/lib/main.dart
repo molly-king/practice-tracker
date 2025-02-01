@@ -2,6 +2,23 @@ import 'package:english_words/english_words.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:txrd_practice_tracker/util.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:google_sign_in_web/google_sign_in_web.dart';
+
+
+
+/// The scopes required by this application.
+// #docregion Initialize
+const List<String> scopes = <String>[
+  'email',
+];
+
+GoogleSignIn _googleSignIn = GoogleSignIn(
+  // Optional clientId
+  clientId: '1025767879770-ublif1910ielu46jlp4rjgt7rppdfvm8.apps.googleusercontent.com',
+  scopes: scopes,
+);
+// #enddocregion Initialize
 
 void main() {
   runApp(MyApp());
@@ -29,6 +46,13 @@ class MyApp extends StatelessWidget {
 class MyAppState extends ChangeNotifier {
   var current = WordPair.random();
 
+  MyAppState() {
+    _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
+      print('User is ${account == null ? 'not signed in' : 'signed in'}');
+      selectSignedInTrainer();
+    });
+  }
+
   void getNext() {
     current = WordPair.random();
     notifyListeners();
@@ -45,12 +69,13 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  var practices = Defaults.startPractices;
+  var practices = <Practice>[];
   var trainers = AvailableTrainers;
-  var selectedTrainer = null;
+  var selectedTrainer;
+
 
   void toggleTrainer(AvailableTrainers trainer) {
-      selectedTrainer = Trainer(trainer.name, trainer.email, trainer.types);
+      selectedTrainer = trainer;
       notifyListeners();
   }
 
@@ -63,38 +88,27 @@ class MyAppState extends ChangeNotifier {
 
   void signUp(Practice practice) {
     practice.trainer = selectedTrainer?.name;
+    updateSheetData(action: 'train', data: practice.toString());
     notifyListeners();
   }
 
   Future<void> _getDataFromSheets() async {
+    List practicesFromSheet = await getSheetsData(action: "read");
+    print("Got data: $practicesFromSheet");
+    practices.clear();
+    for(int i = 0; i< practicesFromSheet.length; i++) {
+      var prax = practicesFromSheet[i];
+      var trainer = prax["Trainer"].length > 0 ? prax["Trainer"] : null;
+      Practice practice = Practice(type: PracticeType.values.firstWhere((e) => e.name == prax["Owner"]), title: prax["Practice"], date: prax["Day"], trainer: trainer);
+      practices.add(practice);
+    }
+    notifyListeners();
+  }
 
-    List dataDict = await getSheetsData(action: "read");
-    print("Got data: ${dataDict}");
-    // List columns = dataDict["columns"];
-    // List data = dataDict["data"];
-
-    // List<DataRow> tableRows = [];
-    // List<DataColumn> tableHeads = List<DataColumn>.generate(
-    //     columns.length, (index) => DataColumn(label: Text(columns[index])));
-
-    // for (int i = 0; i < data.length; i++) {
-    //   DataRow row = DataRow(
-    //     cells: List<DataCell>.generate(
-    //         columns.length, (index) => DataCell(Text("${data[i][index]}"))),
-    //   );
-
-    //   tableRows.add(row);
-    // }
-    // DataTable dataset = DataTable(
-    //   columns: tableHeads,
-    //   rows: tableRows,
-    //   columnSpacing: 20.0,
-    //   dataRowMinHeight: 10.0,
-    //   dataRowMaxHeight: 25.0,
-    //   dividerThickness: 2.0,
-    // );
-
-    // return dataset;
+  void selectSignedInTrainer() {
+    if (_googleSignIn.currentUser != null) {
+      toggleTrainer(AvailableTrainers.values.firstWhere((e) => e.email == _googleSignIn.currentUser?.email));
+    }
   }
 }
 
@@ -115,10 +129,8 @@ class _MyHomePageState extends State<MyHomePage> {
 switch (selectedIndex) {
   case 0:
     page = SkaterPage();
-    break;
   case 1:
     page = TrainerPage();
-    break;
   default:
     throw UnimplementedError('no widget for $selectedIndex');
 }
@@ -213,25 +225,18 @@ class _TrainerPageState extends State<TrainerPage> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-     final TextEditingController trainerController = TextEditingController();
+    appState.selectSignedInTrainer();
     AvailableTrainers? selectedTrainer = appState.selectedTrainer;
     var filteredPractices = appState.filterPractices(selectedTrainer);
 
     return ListView(
       children: [
-         Center(
-          child: DropdownMenu<AvailableTrainers>(
-            initialSelection: selectedTrainer,
-            controller: trainerController,
-            label: Text('Who is training?'), 
-            onSelected: (value) => setState(() {
-              appState.selectedTrainer = value;
-            }),
-            dropdownMenuEntries: AvailableTrainers.values.map<DropdownMenuEntry<AvailableTrainers>>((AvailableTrainers trainer) {
-              return DropdownMenuEntry(
-                value: trainer,
-                label: trainer.name,);
-            }).toList(),
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: TextButton(onPressed: _googleSignIn.currentUser != null ? null :() {
+              _googleSignIn.signIn();
+            }, child: Text("Sign In")),
           ),
         ),
         Padding(
@@ -331,7 +336,7 @@ class Practice {
   late final Color color;
   final String title;
   final String date;
-String? trainer;
+  String? trainer;
 
   Practice({
     required this.type,
@@ -339,6 +344,19 @@ String? trainer;
     required this.date,
     this.trainer,
   }):color = _getColor(type);
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type.name,
+      'title': title,
+      'date': date,
+      'trainer': trainer,
+    };
+  }
+
+  String toString() {
+    return "*trainer*:*$trainer*,*id*:*$date$title*";
+  }
 }
 
 Color _getColor(PracticeType type) {
@@ -365,15 +383,19 @@ Color _getColor(PracticeType type) {
 }
 
 enum PracticeType {
-  open,
-  hellcat,
-  cherrybomb,
-  puta,
-  holyroller,
-  rhinestone,
-  rookies,
-  none,
-  travel,
+  open("open"),
+  hellcat("Hellcats"),
+  cherrybomb("Cherry Bombs"),
+  puta("Putas"),
+  holyroller("Holy Rollers"),
+  rhinestone("Rhinestones"),
+  rookies("Rookies"),
+  none("closed"),
+  travel("Travel Team");
+
+  const PracticeType(this.name);
+
+  final String name;
 }
 
 class Trainer{
