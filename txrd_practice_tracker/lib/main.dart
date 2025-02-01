@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:txrd_practice_tracker/util.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:collection/collection.dart';
 
 
 
@@ -60,11 +61,6 @@ class MyAppState extends ChangeNotifier {
   AvailableTrainers? selectedTrainer;
   AvailableSkaters? loggedInSkater;
 
-
-  void toggleTrainer(AvailableTrainers trainer) {
-      selectedTrainer = trainer;
-  }
-
   List<Practice> filterPractices(AvailableTrainers? trainer) {
     if (trainer == null) {
       return practices;
@@ -85,12 +81,12 @@ class MyAppState extends ChangeNotifier {
 
   Future<void> _getDataFromSheets() async {
     List practicesFromSheet = await getSheetsData(action: "read");
-    print("Got data: $practicesFromSheet");
     practices.clear();
     for(int i = 0; i< practicesFromSheet.length; i++) {
       var prax = practicesFromSheet[i];
       var trainer = prax["Trainer"].length > 0 ? prax["Trainer"] : null;
-      Practice practice = Practice(type: PracticeType.values.firstWhere((e) => e.name == prax["Owner"]), title: prax["Practice"], date: prax["Day"], trainer: trainer);
+      var type = PracticeType.values.firstWhere((e) => e.name == prax["Owner"], orElse: () => PracticeType.none);
+      Practice practice = Practice(type: type, title: prax["Practice"], date: prax["Day"], trainer: trainer);
       practices.add(practice);
     }
     notifyListeners();
@@ -98,13 +94,17 @@ class MyAppState extends ChangeNotifier {
 
 void selectSignedInTrainer() {
     if (_googleSignIn.currentUser != null) {
-      toggleTrainer(AvailableTrainers.values.firstWhere((e) => e.email == _googleSignIn.currentUser?.email));
+      AvailableTrainers? matchingTrainer = AvailableTrainers.values.firstWhereOrNull((e) => e.email == _googleSignIn.currentUser?.email);
+      if (matchingTrainer != null) {
+        selectedTrainer = matchingTrainer;
+      }
     }
   }
 
 void selectSignedInSkater() {
     if (_googleSignIn.currentUser != null) {
-      loggedInSkater = AvailableSkaters.values.firstWhere((e) => e.email == _googleSignIn.currentUser?.email);
+      var matchingSkater = AvailableSkaters.values.firstWhereOrNull((e) => e.email == _googleSignIn.currentUser?.email);
+      loggedInSkater = matchingSkater;
     }
   }
 }
