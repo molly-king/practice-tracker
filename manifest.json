@@ -8,11 +8,5 @@
     "description": "A new Flutter project.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
-    "icons": [
-        {
-            "src": "assets/skate.png",
-            "sizes": "200x200",
-            "type": "image/png"
-        }
-    ]
+
 }
