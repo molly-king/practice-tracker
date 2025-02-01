@@ -63,7 +63,6 @@ class MyAppState extends ChangeNotifier {
 
   void toggleTrainer(AvailableTrainers trainer) {
       selectedTrainer = trainer;
-      notifyListeners();
   }
 
   List<Practice> filterPractices(AvailableTrainers? trainer) {
@@ -97,7 +96,7 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void selectSignedInTrainer() {
+void selectSignedInTrainer() {
     if (_googleSignIn.currentUser != null) {
       toggleTrainer(AvailableTrainers.values.firstWhere((e) => e.email == _googleSignIn.currentUser?.email));
     }
@@ -180,7 +179,7 @@ class _SkaterPageState extends State<SkaterPage> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    appState.selectSignedInTrainer();
+    appState.selectSignedInSkater();
     AvailableSkaters? loggedInSkater = appState.loggedInSkater;
     var filteredPractices = loggedInSkater == null
         ? appState.practices
@@ -243,28 +242,33 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
     final timeStyle = theme.textTheme.bodySmall!.copyWith(
       color: theme.colorScheme.onSurface,
     );
-    return Expanded(
-      child: Container(
-        color: widget.practice.color,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(widget.practice.title,
-            style: titleStyle,), 
-            Text(widget.practice.date,
-            style: timeStyle,),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: ElevatedButton(
-                onPressed: _isButtonDisabled() ? null : () {
-                  appstate.signUp(widget.practice);
-                },
-                child: Text(getButtonText()),
-                ),
-            )
-          ],
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Container(
+            color: widget.practice.color,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(widget.practice.title,
+                style: titleStyle,), 
+                Text(widget.practice.date,
+                style: timeStyle,),
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: ElevatedButton(
+                    onPressed: _isButtonDisabled() ? null : () {
+                      appstate.signUp(widget.practice);
+                    },
+                    child: Text(getButtonText()),
+                    ),
+                )
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -297,34 +301,38 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
     final timeStyle = theme.textTheme.bodySmall!.copyWith(
       color: theme.colorScheme.onSurface,
     );
-    return Expanded(
-      child: Container(
-        color: widget.practice.color,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(widget.practice.title,
-              style: titleStyle,),
-            ), 
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(widget.practice.date,
-              style: timeStyle,),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(4.0),
-              child: ElevatedButton(
-                onPressed: () {
-                  appstate.rsvp(widget.practice);
-                },
-                child: Text("RSVP"),
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            color: widget.practice.color,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Text(widget.practice.title,
+                  style: titleStyle,),
+                ), 
+                Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Text(widget.practice.date,
+                  style: timeStyle,),
                 ),
-            )
-          ],
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      appstate.rsvp(widget.practice);
+                    },
+                    child: Text("RSVP"),
+                    ),
+                )
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 }

@@ -8,7 +8,7 @@ String deploymentID =
 String sheetID = "11TKTn-CphLtp_dlTw5U-9w_oeD6WN_LYlyHi-jIYvwA"; // can be extracted from your google sheets url.
 
 Future<List> triggerWebAPP({required Map body}) async {
-  List<dynamic> dataDict = [];
+  List<dynamic> dataDict = [{"data":"Nothing"}];
   Uri URL =
       Uri.parse("https://script.google.com/macros/s/$deploymentID/exec");
   try {
