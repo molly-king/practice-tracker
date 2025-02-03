@@ -188,7 +188,7 @@ class _SkaterPageState extends State<SkaterPage> {
       children: [
         Padding(
           padding: const EdgeInsets.all(20),
-          child: Text('You have ${filteredPractices.length} practices coming up:'),
+          child: Text('You have ${filteredPractices.length} practices available:'),
         ),
         ...filteredPractices.map((praccy) => Padding(
           padding: const EdgeInsets.all(8.0),
