@@ -242,34 +242,39 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
     final timeStyle = theme.textTheme.bodySmall!.copyWith(
       color: theme.colorScheme.onSurface,
     );
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Container(
+    return
+       Container(
             color: widget.practice.color,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(widget.practice.title,
-                style: titleStyle,), 
-                Text(widget.practice.date,
-                style: timeStyle,),
-                Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: ElevatedButton(
-                    onPressed: _isButtonDisabled() ? null : () {
-                      appstate.signUp(widget.practice);
-                    },
-                    child: Text(getButtonText()),
+                Expanded(
+                  child: Wrap(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(widget.practice.title, style: titleStyle),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(widget.practice.date,
+                                        style: timeStyle,),
                     ),
-                )
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: ElevatedButton(
+                      onPressed: _isButtonDisabled() ? null : () {
+                        appstate.signUp(widget.practice);
+                      },
+                      child: Text(getButtonText()),
+                      ),
+                  )],
+                  ),
+                ), 
               ],
             ),
-          ),
-        ),
-      ],
-    );
+        );
   }
 
   bool _isButtonDisabled() {
@@ -301,39 +306,37 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
     final timeStyle = theme.textTheme.bodySmall!.copyWith(
       color: theme.colorScheme.onSurface,
     );
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
+    return Container(
             color: widget.practice.color,
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Text(widget.practice.title,
-                  style: titleStyle,),
-                ), 
-                Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Text(widget.practice.date,
-                  style: timeStyle,),
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(4.0),
-                  child: ElevatedButton(
-                    onPressed: () {
-                      appstate.rsvp(widget.practice);
-                    },
-                    child: Text("RSVP"),
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              mainAxisSize: MainAxisSize.min,
+              children: [Expanded(
+                child: Wrap(children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Text(widget.practice.title,
+                      style: titleStyle,),
                     ),
-                )
+                    Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(widget.practice.date,
+                    style: timeStyle,),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(4.0),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        appstate.rsvp(widget.practice);
+                      },
+                      child: Text("RSVP"),
+                      ),
+                  ),],),
+              ),
+                
               ],
             ),
-          ),
-        ),
-      ],
-    );
+          );
   }
 }
 
