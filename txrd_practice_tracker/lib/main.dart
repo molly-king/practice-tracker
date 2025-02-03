@@ -52,7 +52,7 @@ class MyAppState extends ChangeNotifier {
       selectSignedInSkater();
     });
     if (_googleSignIn.currentUser == null) {
-      _googleSignIn.signIn();
+      _googleSignIn.signInSilently();
     }
   }
   
@@ -190,7 +190,10 @@ class _SkaterPageState extends State<SkaterPage> {
           padding: const EdgeInsets.all(20),
           child: Text('You have ${filteredPractices.length} practices coming up:'),
         ),
-        ...filteredPractices.map((praccy) => SkaterPracticeRow(practice: praccy)),
+        ...filteredPractices.map((praccy) => Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SkaterPracticeRow(practice: praccy),
+        )),
       ],
     );
   }
@@ -216,9 +219,10 @@ class _TrainerPageState extends State<TrainerPage> {
           child: Text('You have '
               '${filteredPractices.length} practices coming up:'),
         ),
-        ...filteredPractices.map((praccy) => TrainerPracticeRow(practice: praccy)),
+        ...filteredPractices.map((praccy) => Text(praccy.title)),
       ],
     );
+
   }
 }
 
@@ -243,38 +247,65 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
       color: theme.colorScheme.onSurface,
     );
     return
-       Container(
-            color: widget.practice.color,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: Wrap(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(widget.practice.title, style: titleStyle),
-                      ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(widget.practice.date,
-                                        style: timeStyle,),
-                    ),
-                  Padding(
-                    padding: const EdgeInsets.all(4.0),
-                    child: ElevatedButton(
-                      onPressed: _isButtonDisabled() ? null : () {
-                        appstate.signUp(widget.practice);
-                      },
-                      child: Text(getButtonText()),
-                      ),
-                  )],
-                  ),
-                ), 
-              ],
-            ),
-        );
+    Row(
+      children: [
+        Expanded(
+          child: Wrap(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(widget.practice.title, style: titleStyle),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Text(widget.practice.date, style: timeStyle),
+              ),
+              // Padding(
+              //   padding: const EdgeInsets.all(4.0),
+              //   child: ElevatedButton(
+              //     onPressed: _isButtonDisabled() ? null : () {
+              //       appstate.signUp(widget.practice);
+              //     },
+              //     child: Text(getButtonText()),
+              //   ),
+              // ),
+            ],
+          ),
+        ),
+      ],
+    );
+      //  Container(
+      //       color: widget.practice.color,
+      //       child: Row(
+      //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      //         mainAxisSize: MainAxisSize.min,
+      //         children: [
+      //           Expanded(
+      //             child: Wrap(
+      //               children: [
+      //                 Padding(
+      //                   padding: const EdgeInsets.all(8.0),
+      //                   child: Text(widget.practice.title, style: titleStyle),
+      //                 ),
+      //               Padding(
+      //                 padding: const EdgeInsets.all(8.0),
+      //                 child: Text(widget.practice.date,
+      //                                   style: timeStyle,),
+      //               ),
+      //             Padding(
+      //               padding: const EdgeInsets.all(4.0),
+      //               child: ElevatedButton(
+      //                 onPressed: _isButtonDisabled() ? null : () {
+      //                   appstate.signUp(widget.practice);
+      //                 },
+      //                 child: Text(getButtonText()),
+      //                 ),
+      //             )],
+      //             ),
+      //           ), 
+      //         ],
+      //       ),
+      //   );
   }
 
   bool _isButtonDisabled() {
