@@ -9,8 +9,10 @@ String sheetID = "11TKTn-CphLtp_dlTw5U-9w_oeD6WN_LYlyHi-jIYvwA"; // can be extra
 
 Future<List> triggerWebAPP({required Map body}) async {
   List<dynamic> dataDict = [{"data":"Nothing"}];
+  Map<String, dynamic> data = {};
+  data["action"] = body["action"];
   Uri URL =
-      Uri.parse("https://script.google.com/macros/s/$deploymentID/exec");
+    Uri.https("script.google.com", "/macros/s/$deploymentID/exec", data);
   try {
     await http.get(URL).then((response) async {
       if ([200, 201].contains(response.statusCode)) {
