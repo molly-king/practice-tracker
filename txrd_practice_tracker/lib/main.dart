@@ -84,8 +84,9 @@ class MyAppState extends ChangeNotifier {
     for(int i = 0; i< practicesFromSheet.length; i++) {
       var prax = practicesFromSheet[i];
       var trainer = prax["Trainer"].length > 0 ? prax["Trainer"] : null;
+      var rsvplist = prax["RSVPs"].split(",");
       var type = PracticeType.values.firstWhere((e) => e.name == prax["Owner"], orElse: () => PracticeType.none);
-      Practice practice = Practice(type: type, title: prax["Practice"], date: prax["Day"], trainer: trainer);
+      Practice practice = Practice(type: type, title: prax["Practice"], date: prax["Day"], trainer: trainer, rsvps: rsvplist);
       practices.add(practice);
     }
     notifyListeners();
@@ -324,17 +325,24 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
                   ),),
                 Padding(
                     padding: const EdgeInsets.all(4.0),
-                    child: ElevatedButton(
-                      onPressed: () {
-                        appstate.rsvp(widget.practice);
-                      },
-                      child: Text("RSVP"),
-                      ),
-                  ),
+                    child: _buildButton(appstate),
+                    )
                   ],
                   ),
               );
   }
+
+  Widget _buildButton(MyAppState appState) {
+    if (widget.practice.rsvps.contains(appState.loggedInSkater?.email)) {
+      return ElevatedButton(
+        onPressed: () {
+          appState.rsvp(widget.practice);
+        },
+        child: Text('RSVP'),
+      );
+    }
+    return Icon(Icons.check);
+}
 }
 
 class Practice {
@@ -342,13 +350,16 @@ class Practice {
   late final Color color;
   final String title;
   final String date;
+  List<String> rsvps = [];
   String? trainer;
+
 
   Practice({
     required this.type,
     required this.title,
     required this.date,
     this.trainer,
+    this.rsvps = const [],
   }):color = _getColor(type);
 
   Map<String, dynamic> toMap() {
