@@ -81,6 +81,5 @@ Future<List> getSheetsData({required String action}) async {
 Future<void> updateSheetData(
     {required String action, required String data}) async {
   Map body = {"sheetId": sheetID, "action": action, "data": data};
-
   await triggerPost(body: body);
 }

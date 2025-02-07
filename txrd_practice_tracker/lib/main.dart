@@ -66,11 +66,11 @@ class MyAppState extends ChangeNotifier {
   Trainer? selectedTrainer;
   Skater? loggedInSkater;
 
-  List<Practice> filterPractices(Trainer? trainer) {
-    if (trainer == null) {
-      return practices;
+  List<Practice> filterPractices() {
+    if (selectedTrainer == null) {
+      return [];
     }
-    return practices.where((praccy) => trainer.types.contains(praccy.type)).toList();
+    return practices.where((praccy) => selectedTrainer!.types.contains(praccy.type)).toList();
   }
 
   void signUp(Practice practice) {
@@ -79,10 +79,9 @@ class MyAppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void rsvp(Practice practice) {
-    updateSheetData(action: 'rsvp', data: "$practice,*rsvp*:*${loggedInSkater?.email}*");
+ void rsvp(Practice practice) async{
+    await updateSheetData(action: 'rsvp', data: "$practice,*rsvp*:*${loggedInSkater?.email}*");
     _getPractices();
-    notifyListeners();
   }
 
   Future<void> _getPractices() async {
@@ -144,6 +143,7 @@ void selectSignedInTrainer() {
 void selectSignedInSkater() {
     if (_googleSignIn.currentUser != null) {
       var matchingSkater = skaters.firstWhereOrNull((e) => e.email == _googleSignIn.currentUser?.email);
+
       loggedInSkater = matchingSkater;
     }
   }
@@ -167,7 +167,7 @@ switch (selectedIndex) {
   case 1:
     page = TrainerPage();
   case 2:
-    page = RSVPage();
+    page = AttendancePage();
   default:
     throw UnimplementedError('no widget for $selectedIndex');
 }
@@ -189,7 +189,7 @@ switch (selectedIndex) {
                 ),
                 NavigationRailDestination(
                   icon: Icon(Icons.check),
-                  label: Text('RSVPs'),
+                  label: Text('Attendance'),
                 ),
               ],
               selectedIndex: selectedIndex,
@@ -213,30 +213,108 @@ switch (selectedIndex) {
   );}
   }
 
-  class RSVPage extends StatefulWidget {
+  class AttendancePage extends StatefulWidget {
   @override
   State<StatefulWidget> createState() {
-    return _RSVPageState();
+    return _AttendancePageState();
   }
   }
   
-  class _RSVPageState extends State<RSVPage> {
+  class _AttendancePageState extends State<AttendancePage> {
   @override
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
-    var practice = appState.practices[0];
-    var rsvps = practice.rsvps;
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.bodySmall!.copyWith(
+      color: theme.colorScheme.onSurface,
+    );
+    final timeStyle = theme.textTheme.bodySmall!.copyWith(
+      color: theme.colorScheme.onSurface,
+      fontWeight: FontWeight.bold,
+    );
+    appState.selectSignedInTrainer();
+    var filteredPractices = appState.practices.where((prax) => prax.trainer == appState.selectedTrainer).toList();
     return ListView.builder(
-      itemCount: rsvps.length,
+      itemCount: filteredPractices.length,
     itemBuilder: (BuildContext context, int index) {
-      return Container(
-        height: 50,
-        child: Center(child: Text(rsvps[index])),
+      var practice = filteredPractices[index];
+      return Row(
+        children: [
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(practice.title, style: titleStyle),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Text(practice.date, style: timeStyle),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(4.0),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      showDialog(context: context, builder: (BuildContext context) => Dialog.fullscreen(
+                        child: AttendanceDialog(practice: practice)));
+                    },
+                    child: Text("Log Attendance"),
+                  ),
+                ),
+        ],
       );
   }
     );
 }
   }
+
+class AttendanceDialog extends StatefulWidget {
+  final Practice practice;
+
+  AttendanceDialog({required this.practice});
+
+  @override
+  State<AttendanceDialog> createState() => _AttendanceDialogState();
+}
+
+class _AttendanceDialogState extends State<AttendanceDialog> {
+  @override
+  Widget build(BuildContext context) {
+    var appState = context.watch<MyAppState>();
+    var rsvps = widget.practice.rsvps;
+    var skatersWithRsvpFirst = appState.skaters..sort((a, b) {
+      if (rsvps.contains(a.email) && !rsvps.contains(b.email)) {
+        return -1;
+      } else if (!rsvps.contains(a.email) && rsvps.contains(b.email)) {
+        return 1;
+      } else {
+        return 0;
+      }
+    });
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.bodySmall!.copyWith(
+      color: theme.colorScheme.onSurface,
+    );
+    return AlertDialog(
+      title: Text("${widget.practice.title} - ${widget.practice.date}", style: titleStyle,),
+      scrollable: true,
+      content: SizedBox(
+        height: 400,
+        width: 300,
+        child: 
+          ListView.builder(itemBuilder:  (BuildContext context, int index) {
+            return CheckboxListTile(
+              title: Text(skatersWithRsvpFirst[index].name),
+              value: widget.practice.rsvps.contains(skatersWithRsvpFirst[index].email),
+              onChanged: (value) {
+              },
+            );
+          }, itemCount: appState.skaters.length),
+          // appState.rsvp(widget.practice); //TODO: POST attendance method
+          ));
+}
+}
 
 class SkaterPage extends StatefulWidget {
   
@@ -251,13 +329,11 @@ class _SkaterPageState extends State<SkaterPage> {
     appState.selectSignedInSkater();
     Skater? loggedInSkater = appState.loggedInSkater;
     var filteredPractices = loggedInSkater == null
-        ? appState.practices
-        : appState.practices.where((praccy) => loggedInSkater.types.contains(praccy.type)).toList();
+        ? []
+        : appState.practices.where((praccy) => loggedInSkater.types.contains(praccy.type) && praccy.trainer != null).toList();
     return ListView(
       children: [
-        _googleSignInPlugin.renderButton(configuration:  GSIButtonConfiguration(
-            size: GSIButtonSize.large, minimumWidth: double.maxFinite)),
-        Padding(
+                Padding(
           padding: const EdgeInsets.all(20),
           child: Text('You have ${filteredPractices.length} upcoming practices available:'),
         ),
@@ -278,8 +354,7 @@ class _TrainerPageState extends State<TrainerPage> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     appState.selectSignedInTrainer();
-    Trainer? selectedTrainer = appState.selectedTrainer;
-    var filteredPractices = appState.filterPractices(selectedTrainer);
+    var filteredPractices = appState.filterPractices();
 
     return ListView(
       children: [
