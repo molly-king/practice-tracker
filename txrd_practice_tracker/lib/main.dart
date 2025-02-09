@@ -85,7 +85,7 @@ class MyAppState extends ChangeNotifier {
   }
 
   void fileAttendance(Practice practice) async {
-    await updateSheetData(action: 'attendance', data: "*id*:*${practice.date}${practice.title}*,*rsvps*:[*${practice.rsvps.join("*,*")}*]");
+    await updateSheetData(action: 'attendance', data: "${practice.toString()},*rsvps*:[*${practice.rsvps.join("*,*")}*]");
     _getPractices();
   }
 
@@ -182,6 +182,8 @@ switch (selectedIndex) {
         children: [
           SafeArea(
             child: NavigationRail(
+              backgroundColor: Colors.deepPurpleAccent.shade100,
+              indicatorColor: Colors.purple.shade100,
               extended: constraints.maxWidth > 600,
               destinations: [
                 NavigationRailDestination(
@@ -311,7 +313,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
           Column(
             children: [
               Flexible(
-                flex: 1,
+                flex: 4,
                 child: ListView.builder(itemBuilder:  (BuildContext context, int index) {
                   return CheckboxListTile(
                     title: Text(skatersWithRsvpFirst[index].name),
@@ -436,7 +438,25 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
                   padding: const EdgeInsets.all(4.0),
                   child: ElevatedButton(
                     onPressed: _isButtonDisabled() ? null : () {
+                      if(widget.practice.type != PracticeType.open) {
+                      showDialog(context: context, builder: (BuildContext context) => Dialog.fullscreen(
+                        child: AlertDialog(title:Text("Open or closed?"),
+                        content: Text("Do you want to open this practice to all skaters?"),
+                        actions: [
+                          TextButton(onPressed: () {
+                            appstate.signUp(widget.practice);
+                            Navigator.of(context).pop();
+                          }, child: Text("No")),
+                          TextButton(onPressed: () {
+                              widget.practice.type = PracticeType.open;
+                              appstate.signUp(widget.practice);
+                              Navigator.of(context).pop();
+                          }, child: Text("Yes"))  
+                        ],
+                        )));
+                      } else {
                       appstate.signUp(widget.practice);
+                      }
                     },
                     child: Text(getButtonText()),
                   ),
@@ -518,7 +538,7 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
 }
 
 class Practice {
-  final PracticeType type;
+  PracticeType type;
   late final Color color;
   final String title;
   final String date;
@@ -545,7 +565,8 @@ class Practice {
 
 @override
   String toString() {
-    return "*trainer*:*${trainer?.name}*,*id*:*$date$title*";
+    print(type.name);
+    return "*trainer*:*${trainer?.name}*,*type*:*${type.name}*,*id*:*$date$title*";
   }
 }
 
