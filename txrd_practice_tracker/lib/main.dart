@@ -84,6 +84,11 @@ class MyAppState extends ChangeNotifier {
     _getPractices();
   }
 
+  void fileAttendance(Practice practice) async {
+    await updateSheetData(action: 'attendance', data: "*id*:*${practice.date}${practice.title}*,*rsvps*:[*${practice.rsvps.join("*,*")}*]");
+    _getPractices();
+  }
+
   Future<void> _getPractices() async {
     List practicesFromSheet = await getSheetsData(action: "prax");
     practices.clear();
@@ -289,7 +294,7 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
       } else if (!rsvps.contains(a.email) && rsvps.contains(b.email)) {
         return 1;
       } else {
-        return 0;
+        return a.name.compareTo(b.name);
       }
     });
     final theme = Theme.of(context);
@@ -303,16 +308,36 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
         height: 400,
         width: 300,
         child: 
-          ListView.builder(itemBuilder:  (BuildContext context, int index) {
-            return CheckboxListTile(
-              title: Text(skatersWithRsvpFirst[index].name),
-              value: widget.practice.rsvps.contains(skatersWithRsvpFirst[index].email),
-              onChanged: (value) {
-              },
-            );
-          }, itemCount: appState.skaters.length),
-          // appState.rsvp(widget.practice); //TODO: POST attendance method
-          ));
+          Column(
+            children: [
+              Flexible(
+                flex: 1,
+                child: ListView.builder(itemBuilder:  (BuildContext context, int index) {
+                  return CheckboxListTile(
+                    title: Text(skatersWithRsvpFirst[index].name),
+                    value: widget.practice.rsvps.contains(skatersWithRsvpFirst[index].email),
+                    onChanged: (value) {
+                      if (value == true) {
+                        widget.practice.rsvps.add(skatersWithRsvpFirst[index].email);
+                      } else {
+                        widget.practice.rsvps.remove(skatersWithRsvpFirst[index].email);
+                      }
+                      setState(() {});
+                    },  
+                  );
+                }, itemCount: skatersWithRsvpFirst.length),
+              ),
+              Flexible(
+                flex: 1,
+                child: ElevatedButton(onPressed: () {
+                  appState.fileAttendance(widget.practice);
+                  Navigator.of(context).pop();
+                }, child: Text("Log Attendance"),),
+              )
+            ],
+          ),
+          )
+          );
 }
 }
 
