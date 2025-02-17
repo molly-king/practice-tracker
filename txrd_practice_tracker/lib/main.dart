@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:txrd_practice_tracker/util.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:collection/collection.dart';
+import 'package:intl/intl.dart';
 
 
 /// The scopes required by this application.
@@ -57,6 +58,7 @@ class MyAppState extends ChangeNotifier {
     });
     if (_googleSignIn.currentUser == null) {
       _googleSignIn.signInSilently();
+      // _googleSignIn.signIn();
     }
   }
   
@@ -98,7 +100,7 @@ class MyAppState extends ChangeNotifier {
       var trainer = trainers.firstWhereOrNull((e) => e.name == trainerName);
       var rsvplist = prax["RSVPs"].split(",");
       var type = PracticeType.values.firstWhere((e) => e.name == prax["Owner"], orElse: () => PracticeType.none);
-      Practice practice = Practice(type: type, title: prax["Practice"], date: prax["Day"], trainer: trainer, rsvps: rsvplist);
+      Practice practice = Practice(type: type, title: prax["Practice"], date: DateTime.parse(prax["Day"]), trainer: trainer, rsvps: rsvplist);
       practices.add(practice);
     }
     notifyListeners();
@@ -256,7 +258,7 @@ switch (selectedIndex) {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(practice.date, style: timeStyle),
+                    child: Text(practice.dateTime(), style: timeStyle),
                   ),
                 ),
                 Padding(
@@ -431,7 +433,7 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(widget.practice.date, style: timeStyle),
+                    child: Text(widget.practice.dateTime(), style: timeStyle),
                   ),
                 ),
                 Padding(
@@ -511,7 +513,7 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
                 child: 
                     Padding(
                     padding: const EdgeInsets.all(8.0),
-                    child: Text(widget.practice.date,
+                    child: Text(widget.practice.dateTime(),
                     style: timeStyle,),
                   ),),
                 Padding(
@@ -541,7 +543,7 @@ class Practice {
   PracticeType type;
   late final Color color;
   final String title;
-  final String date;
+  final DateTime date;
   List<String> rsvps = [];
   Trainer? trainer;
 
@@ -553,6 +555,10 @@ class Practice {
     this.trainer,
     this.rsvps = const [],
   }):color = _getColor(type);
+
+  String dateTime() {
+    return "${DateFormat.MMMEd().format(date.toLocal())} ${DateFormat.jmz().format(date.toLocal())}";
+  }
 
   Map<String, dynamic> toMap() {
     return {
@@ -566,7 +572,8 @@ class Practice {
 @override
   String toString() {
     print(type.name);
-    return "*trainer*:*${trainer?.name}*,*type*:*${type.name}*,*id*:*$date$title*";
+    final dateID = "${DateFormat.yMd().format(date.toLocal())} ${DateFormat.Hms().format(date.toLocal())}";
+    return "*trainer*:*${trainer?.name}*,*type*:*${type.name}*,*id*:*$dateID$title*";
   }
 }
 
