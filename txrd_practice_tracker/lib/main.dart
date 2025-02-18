@@ -58,14 +58,13 @@ class MyAppState extends ChangeNotifier {
     });
     if (_googleSignIn.currentUser == null) {
       _googleSignIn.signInSilently();
-      // _googleSignIn.signIn();
     }
   }
   
   var practices = <Practice>[];
   var trainers = <Trainer>[];
   var skaters = <Skater>[];
-  Trainer? selectedTrainer;
+Trainer? selectedTrainer;
   Skater? loggedInSkater;
 
   List<Practice> filterPractices() {
@@ -168,6 +167,7 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   Widget build(BuildContext context) {
     Widget page;
+    var appState = context.watch<MyAppState>();
 switch (selectedIndex) {
   case 0:
     page = SkaterPage();
@@ -178,17 +178,8 @@ switch (selectedIndex) {
   default:
     throw UnimplementedError('no widget for $selectedIndex');
 }
-    return LayoutBuilder(builder: (context, constraints) {
-    return Scaffold(
-      body: Row(
-        children: [
-          SafeArea(
-            child: NavigationRail(
-              backgroundColor: Colors.deepPurpleAccent.shade100,
-              indicatorColor: Colors.purple.shade100,
-              extended: constraints.maxWidth > 600,
-              destinations: [
-                NavigationRailDestination(
+
+var destinations = [NavigationRailDestination(
                   icon: Icon(Icons.roller_skating),
                   label: Text('Skaters'),
                 ),
@@ -199,8 +190,31 @@ switch (selectedIndex) {
                 NavigationRailDestination(
                   icon: Icon(Icons.check),
                   label: Text('Attendance'),
-                ),
-              ],
+                )];
+    if (appState.selectedTrainer == null) {
+      destinations = [
+        NavigationRailDestination(
+          icon: Icon(Icons.roller_skating),
+        label: Text("Skaters"))
+      ];
+    }
+    return LayoutBuilder(builder: (context, constraints) {
+    return Scaffold(
+      body: Row(
+        children: [
+          SafeArea(
+            child: NavigationRail(
+              backgroundColor: Colors.deepPurpleAccent.shade100,
+              indicatorColor: Colors.purple.shade100,
+              extended: constraints.maxWidth > 600,
+              trailing: ElevatedButton(
+              onPressed: () {
+                _googleSignIn.disconnect();
+                _googleSignIn.signIn();
+              },
+              child: Text("Switch User"),
+            ),
+              destinations: destinations,
               selectedIndex: selectedIndex,
               onDestinationSelected: (value) {
                 setState(() {
@@ -209,6 +223,7 @@ switch (selectedIndex) {
               },
             ),
           ),
+          
           Expanded(
             child: Container(
               color: ColorScheme.fromSeed(seedColor: Colors.indigo).primaryContainer,
@@ -242,6 +257,13 @@ switch (selectedIndex) {
       fontWeight: FontWeight.bold,
     );
     appState.selectSignedInTrainer();
+    if(appState.selectedTrainer == null) {
+      return Scaffold(
+        body: Center(
+          child: Text("Nothing to see here"),
+        ),
+      );
+    }
     var filteredPractices = appState.practices.where((prax) => prax.trainer == appState.selectedTrainer).toList();
     return ListView.builder(
       itemCount: filteredPractices.length,
