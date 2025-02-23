@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in_web/google_sign_in_web.dart';
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
 import 'package:provider/provider.dart';
 import 'package:txrd_practice_tracker/util.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:collection/collection.dart';
 import 'package:intl/intl.dart';
-
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 /// The scopes required by this application.
 // #docregion Initialize
@@ -20,8 +19,6 @@ final GoogleSignIn _googleSignIn = GoogleSignIn(
   scopes: scopes,
 );
 // #enddocregion Initialize
-
-final GoogleSignInPlugin _googleSignInPlugin = GoogleSignInPlatform.instance as GoogleSignInPlugin;
 
 void main() {
   runApp(MyApp());
@@ -71,7 +68,8 @@ Trainer? selectedTrainer;
     if (selectedTrainer == null) {
       return [];
     }
-    return practices.where((praccy) => selectedTrainer!.types.contains(praccy.type)).toList();
+    // return practices.where((praccy) => selectedTrainer!.types.contains(praccy.type)).toList();
+    return practices.where((p) => selectedTrainer!.types.toSet().intersection(p.types.toSet()).isNotEmpty).toList();
   }
 
   void signUp(Practice practice) {
@@ -93,13 +91,25 @@ Trainer? selectedTrainer;
   Future<void> _getPractices() async {
     List practicesFromSheet = await getSheetsData(action: "prax");
     practices.clear();
-    for(int i = 0; i< practicesFromSheet.length; i++) {
+    for (int i = 0; i < practicesFromSheet.length; i++) {
       var prax = practicesFromSheet[i];
-      var trainerName = prax["Trainer"].length > 0 ? prax["Trainer"] : null;
+      var trainerName = prax["Trainer 1"].length > 0 ? prax["Trainer 1"] : null;
       var trainer = trainers.firstWhereOrNull((e) => e.name == trainerName);
       var rsvplist = prax["RSVPs"].split(",");
-      var type = PracticeType.values.firstWhere((e) => e.name == prax["Owner"], orElse: () => PracticeType.none);
-      Practice practice = Practice(type: type, title: prax["Practice"], date: DateTime.parse(prax["Day"]), trainer: trainer, rsvps: rsvplist);
+      var typenames = prax["Owner"].split(",");
+      var time = prax["Day"];
+      var zoneless = DateTime.parse(time).subtract(Duration(hours: 6)); //diff between UTC (what it thinks datetimes are in) and central.
+
+      // Initialize time zones
+      tz.initializeTimeZones();
+      final String timeZoneName = "America/Chicago";
+      final location = tz.getLocation(timeZoneName);
+
+      // Convert to local time zone, accounting for DST
+      final tzdate = tz.TZDateTime.from(zoneless, location);
+
+      List<PracticeType> types = typenames.map<PracticeType>((name) => PracticeType.values.firstWhere((e) => e.name == name)).toList();
+      Practice practice = Practice(types: types, title: prax["Practice"], date: tzdate, trainer: trainer, rsvps: rsvplist);
       practices.add(practice);
     }
     notifyListeners();
@@ -381,7 +391,7 @@ class _SkaterPageState extends State<SkaterPage> {
     Skater? loggedInSkater = appState.loggedInSkater;
     var filteredPractices = loggedInSkater == null
         ? []
-        : appState.practices.where((praccy) => loggedInSkater.types.contains(praccy.type) && praccy.trainer != null).toList();
+        : appState.practices.where((praccy) => loggedInSkater.types.where((type) => praccy.types.contains(type)).isNotEmpty && praccy.trainer != null).toList();
     return ListView(
       children: [
                 Padding(
@@ -462,7 +472,7 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
                   padding: const EdgeInsets.all(4.0),
                   child: ElevatedButton(
                     onPressed: _isButtonDisabled() ? null : () {
-                      if(widget.practice.type != PracticeType.open) {
+                      if(!widget.practice.types.contains(PracticeType.open)) {
                       showDialog(context: context, builder: (BuildContext context) => Dialog.fullscreen(
                         child: AlertDialog(title:Text("Open or closed?"),
                         content: Text("Do you want to open this practice to all skaters?"),
@@ -472,7 +482,7 @@ class _TrainerPracticeRowState extends State<TrainerPracticeRow> {
                             Navigator.of(context).pop();
                           }, child: Text("No")),
                           TextButton(onPressed: () {
-                              widget.practice.type = PracticeType.open;
+                              widget.practice.types.add(PracticeType.open);
                               appstate.signUp(widget.practice);
                               Navigator.of(context).pop();
                           }, child: Text("Yes"))  
@@ -562,7 +572,7 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
 }
 
 class Practice {
-  PracticeType type;
+  List<PracticeType> types = [];
   late final Color color;
   final String title;
   final DateTime date;
@@ -571,31 +581,22 @@ class Practice {
 
 
   Practice({
-    required this.type,
+    required this.types,
     required this.title,
     required this.date,
     this.trainer,
     this.rsvps = const [],
-  }):color = _getColor(type);
+  }):color = _getColor(types[0]);
 
   String dateTime() {
     return "${DateFormat.MMMEd().format(date.toLocal())} ${DateFormat.jmz().format(date.toLocal())}";
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'type': type.name,
-      'title': title,
-      'date': date,
-      'trainer': trainer?.name,
-    };
-  }
-
 @override
   String toString() {
-    print(type.name);
     final dateID = "${DateFormat.yMd().format(date.toLocal())} ${DateFormat.Hms().format(date.toLocal())}";
-    return "*trainer*:*${trainer?.name}*,*type*:*${type.name}*,*id*:*$dateID$title*";
+    var typenames = types.map((type)=> type.name).toList().join(',');
+    return "*trainer*:*${trainer?.name}*,*type*:*$typenames*,*id*:*$dateID$title*";
   }
 }
 
@@ -675,28 +676,3 @@ class Skater {
   @override
   int get hashCode => name.hashCode ^ email.hashCode;
   }
-
-enum AvailableTrainers {
-  mary("Mary", "mary.christmas@txrd.com", [PracticeType.hellcat, PracticeType.open]),
-  ambi("Ambitchous", "ambitchous@txrd.com", [PracticeType.hellcat, PracticeType.rookies, PracticeType.travel, PracticeType.open]),
-  jq("Jose Queervo", "josequeervo@txrd.com", [PracticeType.rhinestone, PracticeType.rookies, PracticeType.open]),
-  flix("Netflix and Kill", "netflixandkill@txrd.com", [PracticeType.puta, PracticeType.open]);
-
-  const AvailableTrainers(this.name, this.email, this.types);
-  final String name;
-  final String email;
-  final List<PracticeType> types;
-}
-
-
-  enum AvailableSkaters {
-  mary("Mary", "mary.christmas@txrd.com", [PracticeType.hellcat, PracticeType.open]),
-  ambi("Ambitchous", "ambitchous@txrd.com", [PracticeType.hellcat, PracticeType.travel, PracticeType.open]),
-  jq("Jose Queervo", "josequeervo@txrd.com", [PracticeType.rhinestone, PracticeType.open]),
-  flix("Netflix and Kill", "netflixandkill@txrd.com", [PracticeType.puta, PracticeType.open]);
-
-  const AvailableSkaters(this.name, this.email, this.types);
-  final String name;
-  final String email;
-  final List<PracticeType> types;
-}

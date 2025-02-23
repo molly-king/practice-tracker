@@ -4,8 +4,7 @@ import 'dart:convert';
 import 'dart:async';
 
 String deploymentID =
-    "AKfycbzYXXU8gji-n0-pPVRMdZF5e_w9o195m5V3NYKoBZ43OC2jPJpDG0keJ8_8zAmZa3aJ";
-String sheetID = "11TKTn-CphLtp_dlTw5U-9w_oeD6WN_LYlyHi-jIYvwA"; // can be extracted from your google sheets url.
+    "AKfycbwFpwAmI7lwtzRceZ-KTYMWADYx2QSUBlQvvn2s5c5wg_jF2gdV3IkzbHneV-bjo4Sh";
 
 Future<List> triggerWebAPP({required Map body}) async {
   List<dynamic> dataDict = [{"data":"Nothing"}];
@@ -71,7 +70,7 @@ Future<void> triggerPost({required Map body}) async {
 }
 
 Future<List> getSheetsData({required String action}) async {
-  Map body = {"sheetID": sheetID, "action": action};
+  Map body = {"action": action};
 
   List dataDict = await triggerWebAPP(body: body);
 
@@ -80,6 +79,6 @@ Future<List> getSheetsData({required String action}) async {
 
 Future<void> updateSheetData(
     {required String action, required String data}) async {
-  Map body = {"sheetId": sheetID, "action": action, "data": data};
+  Map body = {"action": action, "data": data};
   await triggerPost(body: body);
 }
