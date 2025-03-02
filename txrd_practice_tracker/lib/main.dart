@@ -324,17 +324,19 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
   Widget build(BuildContext context) {
     var appState = context.watch<MyAppState>();
     var rsvps = widget.practice.rsvps;
-    var skatersWithRsvpFirst = appState.skaters..sort((a, b) {
-      if (rsvps.contains(a.email) && !rsvps.contains(b.email)) {
-        return -1;
-      } else if (!rsvps.contains(a.email) && rsvps.contains(b.email)) {
-        return 1;
-      } else {
-        return a.name.compareTo(b.name);
-      }
-    });
+    var skatersWithRsvpFirst = appState.skaters;
+    // .sort((a, b) {
+    //   if (rsvps.contains(a.email) && !rsvps.contains(b.email)) {
+    //     return -1;
+    //   } else if (!rsvps.contains(a.email) && rsvps.contains(b.email)) {
+    //     return 1;
+    //   } else {
+    //     return 0;
+    //   }
+    // });
+    var items = skatersWithRsvpFirst.map((skater) => getRowType(skater)).toList();
     final theme = Theme.of(context);
-    final titleStyle = theme.textTheme.bodySmall!.copyWith(
+    final titleStyle = theme.textTheme.headlineSmall!.copyWith(
       color: theme.colorScheme.onSurface,
     );
     return AlertDialog(
@@ -349,18 +351,26 @@ class _AttendanceDialogState extends State<AttendanceDialog> {
               Flexible(
                 flex: 4,
                 child: ListView.builder(itemBuilder:  (BuildContext context, int index) {
-                  return CheckboxListTile(
-                    title: Text(skatersWithRsvpFirst[index].name),
-                    value: widget.practice.rsvps.contains(skatersWithRsvpFirst[index].email),
+                  var listItem = items[index];
+                  if (listItem is LabelItem) {
+                    return listItem.buildTitle(context);
+                  } else if (listItem is SkaterItem){
+                    var email = listItem.skater.email;
+                    return CheckboxListTile(
+                    title: listItem.buildTitle(context),
+                    value: widget.practice.rsvps.contains(email),
                     onChanged: (value) {
                       if (value == true) {
-                        widget.practice.rsvps.add(skatersWithRsvpFirst[index].email);
+                        widget.practice.rsvps.add(email);
                       } else {
-                        widget.practice.rsvps.remove(skatersWithRsvpFirst[index].email);
+                        widget.practice.rsvps.remove(email);
                       }
                       setState(() {});
                     },  
                   );
+                  } else {
+                    return SizedBox.shrink();
+                  }
                 }, itemCount: skatersWithRsvpFirst.length),
               ),
               Flexible(
@@ -569,6 +579,47 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
       );
     }
 }
+
+
+}
+
+abstract class ListItem {
+  /// The title line to show in a list item.
+  Widget buildTitle(BuildContext context);
+}
+
+class LabelItem implements ListItem {
+  final Skater teamLabel;
+
+  LabelItem(this.teamLabel);
+  @override
+  Widget buildTitle(BuildContext context) {
+    final theme = Theme.of(context);
+    final titleStyle = theme.textTheme.headlineSmall!.copyWith(
+      color: theme.colorScheme.onSurface,
+      backgroundColor: _getColor(teamLabel.types.firstWhere((type)=> type != PracticeType.label))
+    );
+    return Text(teamLabel.name, style: titleStyle,);
+  }
+}
+
+class SkaterItem implements ListItem {
+  final Skater skater;
+
+  SkaterItem(this.skater);
+
+  @override
+  Widget buildTitle(BuildContext context) {
+      return Text(skater.name);
+  }
+}
+
+ListItem getRowType(Skater skater) {
+  if (skater.types.contains(PracticeType.label)) {
+    return LabelItem(skater);
+  } else {
+    return SkaterItem(skater);
+  }
 }
 
 class Practice {
@@ -620,6 +671,8 @@ Color _getColor(PracticeType type) {
       return Colors.grey;
     case PracticeType.travel:
       return Colors.teal;
+    case PracticeType.label:
+      return Colors.black;
   }
 }
 
@@ -632,7 +685,8 @@ enum PracticeType {
   rhinestone("Rhinestones"),
   rookies("Rookies"),
   none("closed"),
-  travel("Travel Team");
+  travel("Travel Team"),
+  label("label"); //used for attendance UI purposes
 
   const PracticeType(this.name);
 
