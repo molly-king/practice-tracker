@@ -78,7 +78,7 @@ Trainer? selectedTrainer;
     notifyListeners();
   }
 
- void rsvp(Practice practice) async{
+ void rsvp(Practice practice) async {
     await updateSheetData(action: 'rsvp', data: "$practice,*rsvp*:*${loggedInSkater?.email}*");
     _getPractices();
   }
@@ -149,7 +149,7 @@ Trainer? selectedTrainer;
 
 void selectSignedInTrainer() {
     if (_googleSignIn.currentUser != null) {
-      Trainer? matchingTrainer = trainers.firstWhereOrNull((e) => e.email == _googleSignIn.currentUser?.email);
+      Trainer? matchingTrainer = trainers.firstWhereOrNull((e) => e.email.toLowerCase() == _googleSignIn.currentUser?.email.toLowerCase());
       if (matchingTrainer != null) {
         selectedTrainer = matchingTrainer;
       }
@@ -158,7 +158,7 @@ void selectSignedInTrainer() {
 
 void selectSignedInSkater() {
     if (_googleSignIn.currentUser != null) {
-      var matchingSkater = skaters.firstWhereOrNull((e) => e.email == _googleSignIn.currentUser?.email);
+      var matchingSkater = skaters.firstWhereOrNull((e) => e.email.toLowerCase() == _googleSignIn.currentUser?.email.toLowerCase());
 
       loggedInSkater = matchingSkater;
     }
@@ -529,6 +529,8 @@ class SkaterPracticeRow extends StatefulWidget {
 }
 
 class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
+  bool _clicked = false;
+
   @override
   Widget build(BuildContext context) {
     var appstate = context.watch<MyAppState>();
@@ -572,7 +574,10 @@ class _SkaterPracticeRowState extends State<SkaterPracticeRow> {
       return Icon(Icons.check);
     } else {
     return ElevatedButton(
-        onPressed: () {
+        onPressed: _clicked ? null : () {
+          setState(() {
+            _clicked = true;
+          });
           appState.rsvp(widget.practice);
         },
         child: Text('RSVP'),
