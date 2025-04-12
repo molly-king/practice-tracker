@@ -48,14 +48,14 @@ class MyAppState extends ChangeNotifier {
   MyAppState() {
     _getSkaters();
     _getTrainers();
-    _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
-      selectSignedInTrainer();
-      selectSignedInSkater();
-      _getPractices();
-    });
-    if (_googleSignIn.currentUser == null) {
-      _googleSignIn.signInSilently();
-    }
+    // _googleSignIn.onCurrentUserChanged.listen((GoogleSignInAccount? account) {
+    //   selectSignedInTrainer();
+    //   selectSignedInSkater();
+    //   _getPractices();
+    // });
+    // if (_googleSignIn.currentUser == null) {
+    //   _googleSignIn.signInSilently();
+    // }
   }
   
   var practices = <Practice>[];
@@ -212,34 +212,35 @@ var destinations = [NavigationRailDestination(
     return Scaffold(
       body: Row(
         children: [
-          SafeArea(
-            child: NavigationRail(
-              backgroundColor: Colors.deepPurpleAccent.shade100,
-              indicatorColor: Colors.purple.shade100,
-              extended: constraints.maxWidth > 600,
-              trailing: ElevatedButton(
-              onPressed: () {
-                _googleSignIn.disconnect();
-                _googleSignIn.signIn();
-              },
-              child: Text("Switch User"),
-            ),
-              destinations: destinations,
-              selectedIndex: selectedIndex,
-              onDestinationSelected: (value) {
-                setState(() {
-                  selectedIndex = value;
-                });
-              },
-            ),
-          ),
+        //   SafeArea(
+        //     child: NavigationRail(
+        //       backgroundColor: Colors.deepPurpleAccent.shade100,
+        //       indicatorColor: Colors.purple.shade100,
+        //       extended: constraints.maxWidth > 600,
+        //       trailing: ElevatedButton(
+        //       onPressed: () {
+        //         _googleSignIn.disconnect();
+        //         _googleSignIn.signIn();
+        //       },
+        //       child: Text("Switch User"),
+        //     ),
+        //       destinations: destinations,
+        //       selectedIndex: selectedIndex,
+        //       onDestinationSelected: (value) {
+        //         setState(() {
+        //           selectedIndex = value;
+        //         });
+        //       },
+        //     ),
+        //   ),
           
-          Expanded(
-            child: Container(
-              color: ColorScheme.fromSeed(seedColor: Colors.indigo).primaryContainer,
-              child: page,
-            ),
-          ),
+        //   Expanded(
+        //     child: Container(
+        //       color: ColorScheme.fromSeed(seedColor: Colors.indigo).primaryContainer,
+        //       child: page,
+        //     ),
+        //   ),
+        Image.asset("assets/images/focat.gif"),
         ],
       ),
     );
